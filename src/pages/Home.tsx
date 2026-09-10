@@ -463,13 +463,13 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="overflow-hidden bg-[#fbf8f5] text-[#241a17]">
+    <main className="bg-[#fbf8f5] text-[#241a17]">
 
       {/* =====================================================
           HERO
           ===================================================== */}
 
-      <section className="relative min-h-screen overflow-hidden bg-[#321f20] text-white">
+      <section className="relative mt-14 min-h-screen overflow-hidden bg-[#321f20] text-white md:mt-0">
 
         {/* HERO IMAGE */}
 
@@ -656,7 +656,7 @@ export default function Home() {
             HERO CONTENT
             ================================================= */}
 
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-[1500px] items-end px-6 pb-16 pt-32 sm:px-10 sm:pb-20 lg:px-16 lg:pb-24">
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-[1500px] items-end px-5 pb-14 pt-32 sm:px-10 sm:pb-20 lg:px-16 lg:pb-24">
 
           <div className="max-w-4xl">
 
@@ -796,7 +796,7 @@ export default function Home() {
           ===================================================== */}
 
       <SectionReveal>
-        <section className="px-5 pb-16 sm:px-10 lg:px-16">
+        <section className="px-5 pt-14 pb-16 sm:px-10 sm:pt-0 lg:px-16">
 
           <SectionHeading
             eyebrow="The RK Edit"

@@ -1,20 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   ShoppingBag,
-  Heart,
+  MessageCircle,
   Sparkles,
   ShieldCheck,
   MapPin,
   ChevronRight,
   CalendarDays,
-  Menu,
-  X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { products } from '../data/mockData';
-import type { Product } from '../types';
+import PublicProductCard from '../components/PublicProductCard';
+import { buildWhatsAppLink, buildGeneralInquiry } from '../data/store';
 
 /* =========================================================
    ETHNIC WOMEN'S WEAR IMAGE LIBRARY
@@ -163,32 +162,54 @@ function EthnicImage({
   alt,
   className = '',
   position = 'center',
+  mobileSrc = null,
+  eager = false,
 }: {
   src: string;
   alt: string;
   className?: string;
   position?: string;
+  mobileSrc?: string | null;
+  eager?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
+  const clean = (src ?? '').trim();
+  const cleanMobile = (mobileSrc ?? '').trim();
 
-  if (failed) {
+  if (!clean || failed) {
     return (
       <div
+        role="img"
+        aria-label={alt}
         className={`absolute inset-0 bg-gradient-to-br from-[#4b252c] via-[#7b4650] to-[#c8a27c] ${className}`}
       />
     );
   }
 
-  return (
+  const img = (
     <img
-      src={src}
+      src={clean}
       alt={alt}
       className={className}
       style={{ objectPosition: position }}
-      loading="lazy"
+      loading={eager ? 'eager' : 'lazy'}
+      fetchPriority={eager ? 'high' : 'auto'}
+      decoding={eager ? 'sync' : 'async'}
+      referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
     />
   );
+
+  if (cleanMobile) {
+    return (
+      <picture className="contents">
+        <source media="(max-width: 767px)" srcSet={cleanMobile} />
+        {img}
+      </picture>
+    );
+  }
+
+  return img;
 }
 
 /* =========================================================
@@ -270,63 +291,76 @@ function SectionHeading({
     </div>
   );
 }
-
 /* =========================================================
-   EDITORIAL TILE
+   COLLECTION TILE — real catalogue categories only
+   Uses actual product photography with object-contain so the
+   garment is never cropped, plus a live piece count.
    ========================================================= */
 
-function EditorialTile({
+function CollectionTile({
   image,
   label,
   title,
   href,
-  large = false,
-  position = 'center',
+  count,
+  index,
 }: {
   image: string;
   label: string;
   title: string;
   href: string;
-  large?: boolean;
-  position?: string;
+  count: number;
+  index: string;
 }) {
   return (
     <Link
       to={href}
-      className={`group relative block overflow-hidden bg-[#3d2425] ${
-        large
-          ? 'min-h-[400px] sm:min-h-[560px] lg:min-h-[740px]'
-          : 'min-h-[280px] sm:min-h-[390px] lg:min-h-[460px]'
-      }`}
+      className="group relative block overflow-hidden bg-[#ece4da]"
     >
-      <EthnicImage
-        src={image}
-        alt={title}
-        position={position}
-        className="absolute inset-0 h-full w-full object-cover transition duration-[1400ms] group-hover:scale-105"
-      />
+      <div className="relative aspect-[3/4]">
+        <EthnicImage
+          src={image}
+          alt={`${title} — designer collection at RK Boutique`}
+          position="center top"
+          className="absolute inset-0 h-full w-full object-contain p-3 transition duration-[1200ms] group-hover:scale-[1.04] sm:p-4"
+        />
+      </div>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/5" />
+      <div className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#241a17]/85 text-[9px] font-semibold text-white backdrop-blur-sm">
+        {index}
+      </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 text-white sm:p-6 lg:p-9">
-        <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.35em] text-white/70">
-          {label}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent p-4 pt-12 text-white sm:p-5 sm:pt-14">
+        <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-white/70 sm:text-[9px]">
+          {label} · {count} {count === 1 ? 'piece' : 'pieces'}
         </p>
-
-        <h3 className="font-serif text-xl leading-tight sm:text-3xl lg:text-4xl">
-          {title}
-        </h3>
-
-        <span className="mt-5 inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.25em]">
-          Explore
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <h3 className="font-serif text-lg leading-tight sm:text-2xl">
+            {title}
+          </h3>
           <ArrowRight
-            size={14}
-            className="transition-transform group-hover:translate-x-1"
+            size={16}
+            className="shrink-0 transition-transform group-hover:translate-x-1"
           />
-        </span>
+        </div>
       </div>
     </Link>
   );
+}
+
+/* Live catalogue helpers — every tile below resolves to real products. */
+function categoryPhoto(category: string): string {
+  const item = products.find((p) => p.category === category);
+  return ((item?.images?.[0] || item?.image || '') as string).trim();
+}
+
+function categoryCount(category: string): number {
+  return products.filter((p) => p.category === category).length;
+}
+
+function filteredPhoto(predicate: (p: (typeof products)[number]) => boolean): string {
+  const item = products.find(predicate);
+  return ((item?.images?.[0] || item?.image || '') as string).trim();
 }
 
 /* =========================================================
@@ -377,70 +411,6 @@ function LookbookTile({
 }
 
 /* =========================================================
-   PRODUCT CARD
-   ========================================================= */
-
-function ProductCard({ product }: { product: Product }) {
-  const [liked, setLiked] = useState(false);
-
-  const image =
-    product.images?.[0] ||
-    ethnicImages.lehenga;
-
-  return (
-    <Link
-      to={`/product/${product.id}`}
-      className="group block"
-    >
-      <div className="relative aspect-[4/5] overflow-hidden bg-[#eee6df] flex items-center justify-center">
-        <img
-          src={image}
-          alt={product.name}
-          className="max-h-full max-w-full object-contain transition duration-700 group-hover:scale-105"
-          loading="lazy"
-        />
-
-        <button
-          type="button"
-          aria-label="Wishlist"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setLiked((value) => !value);
-          }}
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#241a17] shadow-sm"
-        >
-          <Heart
-            size={16}
-            fill={liked ? 'currentColor' : 'none'}
-          />
-        </button>
-
-        <div className="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-[#241a17]">
-          Rental
-        </div>
-      </div>
-
-      <div className="pt-4">
-        <h3 className="font-serif text-base leading-snug text-[#241a17] sm:text-xl">
-          {product.name}
-        </h3>
-
-        <p className="mt-1 text-xs text-[#81746d]">
-          {product.category}
-        </p>
-
-        {product.salePrice && (
-          <p className="mt-3 text-xs font-semibold text-[#241a17]">
-            ₹{product.salePrice}
-          </p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-/* =========================================================
    HOME
    ========================================================= */
 
@@ -448,7 +418,6 @@ export default function Home() {
   const { cart } = useApp();
 
   const [heroLoaded, setHeroLoaded] = useState(false);
-  const [mobileMenu, setMobileMenu] = useState(false);
 
   const featuredProducts = products.slice(0, 8);
 
@@ -469,14 +438,16 @@ export default function Home() {
           HERO
           ===================================================== */}
 
-      <section className="relative mt-14 min-h-screen overflow-hidden bg-[#321f20] text-white md:mt-0">
+      <section className="relative overflow-hidden bg-[#321f20] text-white">
 
         {/* HERO IMAGE */}
 
         <EthnicImage
           src={ethnicImages.hero}
+          mobileSrc={ethnicImages.heroMobile}
           alt="Indian woman wearing luxury ethnic wedding wear"
-          position="center top"
+          position="center 20%"
+          eager
           className={`absolute inset-0 h-full w-full object-cover transition duration-[1800ms] ${
             heroLoaded
               ? 'scale-100 opacity-100'
@@ -490,217 +461,60 @@ export default function Home() {
 
         <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/15 to-transparent" />
 
-        {/* =================================================
-            HERO NAVBAR
-            ================================================= */}
-
-        <header className="absolute left-0 right-0 top-0 z-40">
-
-          <div className="mx-auto max-w-[1500px] px-5 pt-4 sm:px-8 lg:px-14">
-
-            <div className="flex h-[68px] items-center justify-between border-b border-white/20">
-
-              {/* LOGO */}
-
-              <Link
-                to="/"
-                className="group flex items-center gap-3"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/10 backdrop-blur-md">
-                  <span className="font-serif text-lg italic text-[#f3dfc5]">
-                    RK
-                  </span>
-                </div>
-
-                <div>
-                  <div className="font-serif text-lg leading-none tracking-wide">
-                    RK Rent Dress
-                  </div>
-
-                  <div className="mt-1 text-[7px] uppercase tracking-[0.35em] text-white/65">
-                    Raipur
-                  </div>
-                </div>
-              </Link>
-
-              {/* DESKTOP NAV */}
-
-              <nav className="hidden items-center gap-8 lg:flex">
-
-                <Link
-                  to="/"
-                  className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white"
-                >
-                  Home
-                </Link>
-
-                <Link
-                  to="/shop"
-                  className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/75 transition hover:text-white"
-                >
-                  Collection
-                </Link>
-
-                <Link
-                  to="/shop?filter=rental"
-                  className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/75 transition hover:text-white"
-                >
-                  Rentals
-                </Link>
-
-                <Link
-                  to="/shop?category=Lehenga"
-                  className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/75 transition hover:text-white"
-                >
-                  Lehengas
-                </Link>
-
-                <Link
-                  to="/shop?category=Gown"
-                  className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/75 transition hover:text-white"
-                >
-                  Gowns
-                </Link>
-
-              </nav>
-
-              {/* RIGHT */}
-
-              <div className="flex items-center gap-3">
-
-                <Link
-                  to="/cart"
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/10 backdrop-blur-md"
-                >
-                  <ShoppingBag size={16} />
-
-                  {cart.length > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ead5bd] px-1 text-[8px] font-bold text-[#241a17]">
-                      {cart.length}
-                    </span>
-                  )}
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setMobileMenu((value) => !value)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/10 backdrop-blur-md lg:hidden"
-                  aria-label="Menu"
-                >
-                  {mobileMenu ? (
-                    <X size={18} />
-                  ) : (
-                    <Menu size={18} />
-                  )}
-                </button>
-
-              </div>
-            </div>
-          </div>
-
-          {/* MOBILE MENU */}
-
-          {mobileMenu && (
-            <div className="border-b border-white/15 bg-[#241719]/95 px-6 py-6 backdrop-blur-xl lg:hidden">
-
-              <nav className="flex flex-col">
-
-                <Link
-                  to="/"
-                  onClick={() => setMobileMenu(false)}
-                  className="border-b border-white/10 py-4 text-[10px] font-semibold uppercase tracking-[0.25em]"
-                >
-                  Home
-                </Link>
-
-                <Link
-                  to="/shop"
-                  onClick={() => setMobileMenu(false)}
-                  className="border-b border-white/10 py-4 text-[10px] font-semibold uppercase tracking-[0.25em]"
-                >
-                  Collection
-                </Link>
-
-                <Link
-                  to="/shop?filter=rental"
-                  onClick={() => setMobileMenu(false)}
-                  className="border-b border-white/10 py-4 text-[10px] font-semibold uppercase tracking-[0.25em]"
-                >
-                  Rental Collection
-                </Link>
-
-                <Link
-                  to="/shop?category=Lehenga"
-                  onClick={() => setMobileMenu(false)}
-                  className="border-b border-white/10 py-4 text-[10px] font-semibold uppercase tracking-[0.25em]"
-                >
-                  Designer Lehengas
-                </Link>
-
-                <Link
-                  to="/shop?category=Gown"
-                  onClick={() => setMobileMenu(false)}
-                  className="py-4 text-[10px] font-semibold uppercase tracking-[0.25em]"
-                >
-                  Gowns
-                </Link>
-
-              </nav>
-
-            </div>
-          )}
-
-        </header>
 
         {/* =================================================
             HERO CONTENT
             ================================================= */}
 
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-[1500px] items-end px-5 pb-14 pt-32 sm:px-10 sm:pb-20 lg:px-16 lg:pb-24">
+        <div className="relative z-10 mx-auto flex min-h-[86svh] max-w-[1500px] items-end px-5 pb-10 pt-28 sm:px-10 sm:pb-20 md:min-h-screen lg:px-16 lg:pb-24">
 
           <div className="max-w-4xl">
 
-            <div className="mb-6 flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.35em] text-[#f0ddc7]">
+            <div className="mb-5 flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.35em] text-[#f0ddc7] sm:mb-6">
               <span className="h-px w-10 bg-[#f0ddc7]/60" />
-              Designer Ethnic Wear · Raipur
+              Designer styles to buy · Signature looks to rent
             </div>
 
-            <h1 className="font-serif text-[2.6rem] leading-[0.88] tracking-[-0.03em] sm:text-7xl lg:text-[clamp(5rem,9vw,8.5rem)]">
+            <h1 className="font-serif text-[2.35rem] leading-[0.95] tracking-[-0.03em] sm:text-7xl lg:text-[clamp(5rem,9vw,8.5rem)]">
 
-              Your Dream Look.
-
-              <br />
-
-              <span className="italic text-[#ead5bd]">
-                For Your Moment.
-              </span>
+              Your Next Statement Look Starts Here.
 
             </h1>
 
-            <p className="mt-7 max-w-xl text-sm leading-7 text-white/80 sm:text-base">
-              Discover designer lehengas, bridal outfits,
-              reception gowns, sarees and statement ethnic
-              looks — available to rent for your most special moments.
+            <p className="mt-6 max-w-xl text-sm leading-7 text-white/80 sm:mt-7 sm:text-base">
+              Discover designer styles for every occasion.
+              Find your perfect outfit to buy or rent.
             </p>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row">
 
               <Link
-                to="/shop?filter=rental"
-                className="inline-flex h-13 items-center justify-center gap-3 bg-[#f8f2eb] px-7 text-[9px] font-bold uppercase tracking-[0.25em] text-[#241a17] transition hover:bg-[#ead5bd]"
+                to="/shop"
+                className="inline-flex h-12 items-center justify-center gap-3 bg-[#f8f2eb] px-7 text-[9px] font-bold uppercase tracking-[0.25em] text-[#241a17] transition hover:bg-[#ead5bd] sm:h-[52px]"
               >
-                Explore Rental Collection
+                Explore Collection
                 <ArrowRight size={15} />
               </Link>
 
               <Link
-                to="/shop"
-                className="inline-flex h-13 items-center justify-center gap-3 border border-white/40 bg-white/5 px-7 text-[9px] font-bold uppercase tracking-[0.25em] text-white backdrop-blur-sm transition hover:bg-white hover:text-[#241a17]"
+                to="/shop?filter=rental"
+                className="inline-flex h-12 items-center justify-center gap-3 border border-white/40 bg-white/5 px-7 text-[9px] font-bold uppercase tracking-[0.25em] text-white backdrop-blur-sm transition hover:bg-white hover:text-[#241a17] sm:h-[52px]"
               >
-                View Collection
+                Explore Rental Styles
+                <ArrowRight size={15} />
               </Link>
 
             </div>
+
+            <a
+              href={buildWhatsAppLink(buildGeneralInquiry())}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#f0ddc7]/90 underline-offset-4 hover:underline"
+            >
+              <MessageCircle size={13} />
+              Questions? Chat on WhatsApp
+            </a>
 
             <div className="mt-10 flex items-center gap-3 text-[8px] uppercase tracking-[0.3em] text-white/65">
               <MapPin size={13} />
@@ -799,53 +613,66 @@ export default function Home() {
         <section className="px-5 pt-14 pb-16 sm:px-10 sm:pt-0 lg:px-16">
 
           <SectionHeading
-            eyebrow="The RK Edit"
-            title="Indian elegance for every celebration."
-            description="Explore statement silhouettes curated for weddings, receptions, engagements, parties and festive occasions."
+            eyebrow="Shop By Collection"
+            title="Real pieces, ready to explore."
+            description="Every tile below opens the live catalogue — buy or rent, with honest pricing on each piece."
           />
 
-          <div className="mx-auto mt-8 grid max-w-[1500px] gap-3 sm:mt-14 sm:gap-4 md:grid-cols-2">
+          <div className="mx-auto mt-8 grid max-w-[1500px] grid-cols-2 gap-3 sm:mt-14 sm:gap-4 lg:grid-cols-3">
 
-            <EditorialTile
-              image={ethnicImages.lehenga}
-              label="01 · Signature"
+            <CollectionTile
+              image={categoryPhoto('Lehenga')}
+              label="Signature"
               title="Designer Lehengas"
               href="/shop?category=Lehenga"
-              large
-              position="center top"
+              count={categoryCount('Lehenga')}
+              index="01"
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <CollectionTile
+              image={categoryPhoto('Saree')}
+              label="Timeless"
+              title="Sarees"
+              href="/shop?category=Saree"
+              count={categoryCount('Saree')}
+              index="02"
+            />
 
-              <EditorialTile
-                image={ethnicImages.bridal}
-                label="02 · Bridal"
-                title="Bridal Wear"
-                href="/shop?category=Bridal"
-              />
+            <CollectionTile
+              image={categoryPhoto('Gown')}
+              label="Statement"
+              title="Gowns"
+              href="/shop?category=Gown"
+              count={categoryCount('Gown')}
+              index="03"
+            />
 
-              <EditorialTile
-                image={ethnicImages.saree}
-                label="03 · Timeless"
-                title="Sarees"
-                href="/shop?category=Saree"
-              />
+            <CollectionTile
+              image={categoryPhoto('Suit')}
+              label="Everyday Grace"
+              title="Suits & Sets"
+              href="/shop?category=Suit"
+              count={categoryCount('Suit')}
+              index="04"
+            />
 
-              <EditorialTile
-                image={ethnicImages.gown}
-                label="04 · Statement"
-                title="Gowns"
-                href="/shop?category=Gown"
-              />
+            <CollectionTile
+              image={filteredPhoto((p) => p.type !== 'retail')}
+              label="Wear & Return"
+              title="Rental Collection"
+              href="/shop?filter=rental"
+              count={products.filter((p) => p.type !== 'retail').length}
+              index="05"
+            />
 
-              <EditorialTile
-                image={ethnicImages.reception}
-                label="05 · Evening"
-                title="Reception Looks"
-                href="/shop?category=Reception"
-              />
-
-            </div>
+            <CollectionTile
+              image={filteredPhoto((p) => p.newArrival)}
+              label="Just In"
+              title="New Arrivals"
+              href="/shop?filter=new"
+              count={products.filter((p) => p.newArrival).length}
+              index="06"
+            />
 
           </div>
 
@@ -1194,12 +1021,12 @@ export default function Home() {
               </div>
 
               <h3 className="mt-5 font-serif text-xl sm:mt-6 sm:text-2xl">
-                Curated Looks
+                Browse Before Visiting
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-[#71645e]">
-                Beautiful Indian silhouettes selected for
-                weddings, parties and celebrations.
+                Explore real product photos and honest pricing
+                online, then come see your favourites in store.
               </p>
 
             </div>
@@ -1214,12 +1041,12 @@ export default function Home() {
               </div>
 
               <h3 className="mt-6 font-serif text-2xl">
-                Occasion Ready
+                Every Occasion Covered
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-[#71645e]">
-                Find the right look for your exact celebration
-                and make your entrance unforgettable.
+                Weddings, receptions, engagements, parties and
+                festive moments — filter the collection your way.
               </p>
 
             </div>
@@ -1234,13 +1061,23 @@ export default function Home() {
               </div>
 
               <h3 className="mt-6 font-serif text-2xl">
-                Rental Made Simple
+                Ask on WhatsApp
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-[#71645e]">
-                Choose your outfit, enquire about availability
-                and get ready for your special occasion.
+                Message the boutique directly — product inquiries
+                carry the exact piece, price and your options.
               </p>
+
+              <a
+                href={buildWhatsAppLink(buildGeneralInquiry())}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.25em] text-[#6B1D35] hover:underline"
+              >
+                <MessageCircle size={13} />
+                Start a chat
+              </a>
 
             </div>
 
@@ -1287,7 +1124,7 @@ export default function Home() {
               <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:mt-12 sm:gap-x-4 sm:gap-y-12 lg:grid-cols-4">
 
                 {featuredProducts.map((product) => (
-                  <ProductCard
+                  <PublicProductCard
                     key={product.id}
                     product={product}
                   />
@@ -1301,6 +1138,126 @@ export default function Home() {
 
         </SectionReveal>
       )}
+
+      {/* =====================================================
+          BUY VS RENT
+          ===================================================== */}
+
+      <SectionReveal>
+        <section className="border-t border-[#e2d8d0] bg-[#f1ebe5] px-5 py-16 sm:px-10 sm:py-24 lg:px-16">
+
+          <SectionHeading
+            eyebrow="Two Ways To Wear It"
+            title="Buy the look, or rent the moment."
+          />
+
+          <div className="mx-auto mt-10 grid max-w-[1200px] gap-4 sm:mt-14 md:grid-cols-2">
+
+            <div className="border border-[#ddd3ca] bg-white p-7 sm:p-10">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-[#9b6b45]">
+                Buy
+              </p>
+              <h3 className="mt-3 font-serif text-2xl leading-tight text-[#241a17] sm:text-3xl">
+                Designer styles to buy.
+              </h3>
+              <p className="mt-4 text-sm leading-7 text-[#74665e]">
+                Discover an outfit to own — {products.filter((p) => p.type !== 'rental').length} pieces
+                available for purchase, from ₹{Math.min(...products.filter((p) => p.salePrice > 0).map((p) => p.salePrice)).toLocaleString('en-IN')},
+                with sizes, colours and care details on every page.
+              </p>
+              <Link
+                to="/shop?filter=buy"
+                className="mt-7 inline-flex items-center gap-3 border-b border-[#241a17] pb-2 text-[9px] font-bold uppercase tracking-[0.25em]"
+              >
+                Shop buyable styles
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+
+            <div className="border border-[#6B1D35]/20 bg-[#2b1a1c] p-7 text-white sm:p-10">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-[#ead5bd]">
+                Rent
+              </p>
+              <h3 className="mt-3 font-serif text-2xl leading-tight sm:text-3xl">
+                Signature looks to rent.
+              </h3>
+              <p className="mt-4 text-sm leading-7 text-white/75">
+                Find a designer outfit for your special occasion without buying
+                it — {products.filter((p) => p.type !== 'retail').length} pieces
+                for rent, from ₹{Math.min(...products.filter((p) => p.rentalPrice > 0).map((p) => p.rentalPrice)).toLocaleString('en-IN')}/day
+                with the refundable deposit shown upfront.
+              </p>
+              <Link
+                to="/shop?filter=rental"
+                className="mt-7 inline-flex items-center gap-3 border-b border-[#ead5bd] pb-2 text-[9px] font-bold uppercase tracking-[0.25em] text-[#ead5bd]"
+              >
+                Explore rental styles
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+
+          </div>
+
+        </section>
+      </SectionReveal>
+
+      {/* =====================================================
+          BRAND STORY
+          ===================================================== */}
+
+      <SectionReveal>
+        <section className="px-5 py-16 sm:px-10 sm:py-24 lg:px-16">
+
+          <div className="mx-auto grid max-w-[1200px] items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+
+            <div>
+              <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.4em] text-[#9b6b45]">
+                The Boutique
+              </p>
+              <h2 className="font-serif text-3xl leading-[1.02] tracking-[-0.02em] text-[#241a17] sm:text-4xl lg:text-5xl">
+                A Raipur showroom for
+                <br />
+                <span className="italic text-[#9b6b45]">occasion dressing.</span>
+              </h2>
+              <p className="mt-6 max-w-xl text-sm leading-8 text-[#74665e] sm:text-base">
+                RK Boutique &amp; Rentals curates designer ethnic and
+                contemporary wear in the heart of Raipur. Browse the
+                collection online, then visit the store — or message us
+                on WhatsApp — to find the piece your celebration deserves.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  to="/about"
+                  className="inline-flex h-12 items-center justify-center gap-2 bg-[#241a17] px-7 text-[10px] font-bold uppercase tracking-[0.22em] text-white transition hover:bg-[#6B1D35]"
+                >
+                  Our story <ArrowRight size={14} />
+                </Link>
+                <Link
+                  to="/contact"
+                  className="inline-flex h-12 items-center justify-center gap-2 border border-[#241a17] px-7 text-[10px] font-bold uppercase tracking-[0.22em] text-[#241a17] transition hover:bg-[#241a17] hover:text-white"
+                >
+                  Visit & contact
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 border-y border-[#ddd3ca] py-8 lg:grid-cols-1 lg:gap-0 lg:border-y-0 lg:border-l lg:py-2 lg:pl-10">
+              {[
+                { value: `${products.length}`, label: 'Curated pieces' },
+                { value: `${new Set(products.map((p) => p.category)).size}`, label: 'Categories' },
+                { value: `${products.filter((p) => p.type !== 'retail').length}`, label: 'Rentable looks' },
+              ].map((stat) => (
+                <div key={stat.label} className="py-2 text-center lg:py-4 lg:text-left">
+                  <p className="font-serif text-3xl text-[#241a17] sm:text-4xl">{stat.value}</p>
+                  <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#81746d]">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+          </div>
+
+        </section>
+      </SectionReveal>
 
       {/* =====================================================
           FINAL CTA

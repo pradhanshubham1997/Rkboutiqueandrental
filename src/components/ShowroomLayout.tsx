@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Search, ShoppingBag, Heart, Menu, X, MapPin, Phone, ChevronUp, LayoutDashboard } from 'lucide-react';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { Search, ShoppingBag, Menu, X, MapPin, Phone, MessageCircle, ChevronUp, LayoutDashboard } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { STORE, buildWhatsAppLink, buildGeneralInquiry } from '../data/store';
 
 const navLinks = [
-  { label: 'NEW IN', to: '/shop?filter=new' },
+  { label: 'HOME', to: '/' },
   { label: 'SHOP', to: '/shop' },
   { label: 'RENT', to: '/shop?filter=rental' },
-  { label: 'ETHNIC', to: '/shop?category=Lehenga' },
-  { label: 'WESTERN', to: '/shop?category=Gown' },
-  { label: 'OCCASIONS', to: '/shop' },
+  { label: 'ABOUT', to: '/about' },
+  { label: 'CONTACT', to: '/contact' },
 ];
 
 export default function ShowroomLayout() {
@@ -19,6 +19,16 @@ export default function ShowroomLayout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const submitSearch = (event?: React.FormEvent) => {
+    event?.preventDefault();
+    const q = searchQuery.trim();
+    setSearchOpen(false);
+    navigate(q ? `/shop?q=${encodeURIComponent(q)}` : '/shop');
+    setSearchQuery('');
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -100,17 +110,21 @@ export default function ShowroomLayout() {
             <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className={`p-2 transition-colors hidden sm:block ${!isHome || scrolled ? 'text-charcoal-muted hover:text-burgundy' : 'text-cream/70 hover:text-cream'}`}
+                className={`p-2 transition-colors ${!isHome || scrolled ? 'text-charcoal-muted hover:text-burgundy' : 'text-cream/70 hover:text-cream'}`}
                 aria-label="Search"
               >
                 <Search size={18} strokeWidth={1.5} />
               </button>
-              <button
-                className={`p-2 transition-colors hidden sm:block ${!isHome || scrolled ? 'text-charcoal-muted hover:text-burgundy' : 'text-cream/70 hover:text-cream'}`}
-                aria-label="Wishlist"
+              <a
+                href={buildWhatsAppLink(buildGeneralInquiry())}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Chat on WhatsApp"
+                title="Chat on WhatsApp"
+                className={`hidden p-2 transition-colors sm:block ${!isHome || scrolled ? 'text-charcoal-muted hover:text-burgundy' : 'text-cream/70 hover:text-cream'}`}
               >
-                <Heart size={18} strokeWidth={1.5} />
-              </button>
+                <MessageCircle size={18} strokeWidth={1.5} />
+              </a>
               <Link
                 to="/cart"
                 className={`relative p-2 transition-colors ${!isHome || scrolled ? 'text-charcoal-muted hover:text-burgundy' : 'text-cream/70 hover:text-cream'}`}
@@ -139,15 +153,18 @@ export default function ShowroomLayout() {
         {searchOpen && (
           <div className="absolute top-full left-0 right-0 bg-ivory border-b border-cream animate-fade-in z-50">
             <div className="max-w-2xl mx-auto px-4 py-6">
-              <div className="relative">
+              <form className="relative" onSubmit={submitSearch}>
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-rose" />
                 <input
-                  type="text"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search lehengas, gowns, sarees..."
+                  aria-label="Search the collection"
                   className="w-full pl-11 pr-4 py-3 bg-cream/40 border border-cream text-sm tracking-wide font-body placeholder:text-charcoal-muted/40 focus:border-burgundy transition-colors"
                   autoFocus
                 />
-              </div>
+              </form>
             </div>
           </div>
         )}
@@ -169,12 +186,20 @@ export default function ShowroomLayout() {
               <Link to="/cart" className="block text-sm tracking-[0.2em] font-medium text-charcoal hover:text-burgundy transition-colors font-body uppercase">
                 CART {cart.length > 0 && `(${cart.length})`}
               </Link>
+              <a
+                href={buildWhatsAppLink(buildGeneralInquiry())}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 py-4 text-[10px] font-semibold uppercase tracking-[0.25em] text-burgundy"
+              >
+                <MessageCircle size={15} /> WhatsApp Inquiry
+              </a>
               <Link to="/dashboard" className="block text-sm tracking-[0.2em] font-medium text-charcoal-muted/50 hover:text-burgundy transition-colors font-body uppercase">
                 DASHBOARD
               </Link>
               <div className="pt-4 flex items-center gap-2 text-xs text-charcoal-muted/60 font-body">
                 <Phone size={14} />
-                <span>+91 98XXX-XXX-XX</span>
+                <span>{STORE.phoneDisplay}</span>
               </div>
             </nav>
           </div>
@@ -220,9 +245,15 @@ export default function ShowroomLayout() {
             <div>
               <h5 className="text-[9px] tracking-[0.3em] uppercase text-cream/30 mb-5 font-body">Collections</h5>
               <ul className="space-y-3">
-                {['Bridal Lehengas', 'Evening Gowns', 'Designer Sarees', 'Indo-Western', 'Sherwanis'].map((item) => (
-                  <li key={item}>
-                    <Link to="/shop" className="text-sm text-cream/45 hover:text-cream transition-colors font-body">{item}</Link>
+                {[
+                  { label: 'Designer Lehengas', to: '/shop?category=Lehenga' },
+                  { label: 'Evening Gowns', to: '/shop?category=Gown' },
+                  { label: 'Designer Sarees', to: '/shop?category=Saree' },
+                  { label: 'Suits & Sets', to: '/shop?category=Suit' },
+                  { label: 'New Arrivals', to: '/shop?filter=new' },
+                ].map((item) => (
+                  <li key={item.label}>
+                    <Link to={item.to} className="text-sm text-cream/45 hover:text-cream transition-colors font-body">{item.label}</Link>
                   </li>
                 ))}
               </ul>
@@ -230,9 +261,15 @@ export default function ShowroomLayout() {
             <div>
               <h5 className="text-[9px] tracking-[0.3em] uppercase text-cream/30 mb-5 font-body">Services</h5>
               <ul className="space-y-3">
-                {['Rent a Look', 'Buy Outfit', 'Styling Consultation', 'Custom Stitching', 'Gift Cards'].map((item) => (
-                  <li key={item}>
-                    <Link to="/shop" className="text-sm text-cream/45 hover:text-cream transition-colors font-body">{item}</Link>
+                {[
+                  { label: 'Rent a Look', to: '/shop?filter=rental' },
+                  { label: 'Buy an Outfit', to: '/shop?filter=buy' },
+                  { label: 'Our Story', to: '/about' },
+                  { label: 'Visit & Contact', to: '/contact' },
+                  { label: 'All Products', to: '/shop' },
+                ].map((item) => (
+                  <li key={item.label}>
+                    <Link to={item.to} className="text-sm text-cream/45 hover:text-cream transition-colors font-body">{item.label}</Link>
                   </li>
                 ))}
               </ul>
@@ -242,15 +279,26 @@ export default function ShowroomLayout() {
               <ul className="space-y-3">
                 <li className="flex items-start gap-2 text-sm text-cream/45 font-body">
                   <MapPin size={14} className="mt-0.5 flex-shrink-0 text-rose/60" />
-                  <span>123 MG Road, Raipur,<br/>Chhattisgarh 492001</span>
+                  <span>{STORE.addressLines[0]},<br />{STORE.addressLines[1]}</span>
                 </li>
                 <li className="flex items-center gap-2 text-sm text-cream/45 font-body">
                   <Phone size={14} className="flex-shrink-0 text-rose/60" />
-                  <span>+91 98XXX-XXX-XX</span>
+                  <span>{STORE.phoneDisplay}</span>
+                </li>
+                <li>
+                  <a
+                    href={buildWhatsAppLink(buildGeneralInquiry())}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-cream/70 hover:text-cream transition-colors font-body"
+                  >
+                    <MessageCircle size={14} className="flex-shrink-0 text-rose/60" />
+                    <span>Chat on WhatsApp</span>
+                  </a>
                 </li>
                 <li className="flex items-center gap-2 text-sm text-cream/45 font-body">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-rose/60"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-                  <span>@rk_rent_dress_raipur_</span>
+                  <span>{STORE.instagram}</span>
                 </li>
               </ul>
             </div>
@@ -264,8 +312,12 @@ export default function ShowroomLayout() {
               © 2026 RK BOUTIQUE & RENTALS. ALL RIGHTS RESERVED.
             </p>
             <div className="flex gap-6">
-              {['PRIVACY', 'TERMS', 'SHIPPING'].map((t) => (
-                <a key={t} href="#" className="text-[9px] tracking-[0.15em] text-cream/20 hover:text-cream/50 transition-colors font-body">{t}</a>
+              {[
+                { label: 'ABOUT', to: '/about' },
+                { label: 'CONTACT', to: '/contact' },
+                { label: 'SHOP', to: '/shop' },
+              ].map((t) => (
+                <Link key={t.label} to={t.to} className="text-[9px] tracking-[0.15em] text-cream/20 hover:text-cream/50 transition-colors font-body">{t.label}</Link>
               ))}
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import PublicImage, { cleanSrc } from '../components/PublicImage';
 
 export default function Cart() {
   const { cart, removeFromCart, updateCartQuantity, cartTotal } = useApp();
@@ -40,8 +41,8 @@ export default function Cart() {
               <div className="space-y-4">
                 {retailItems.map(item => (
                   <div key={`${item.product.id}-retail`} className="flex gap-4 p-4 bg-cream/30 border border-cream">
-                    <Link to={`/product/${item.product.id}`} className="w-20 h-24 overflow-hidden flex-shrink-0 bg-cream flex items-center justify-center">
-                      <img src={item.product.image} alt={item.product.name} className="max-h-full max-w-full object-contain" />
+                    <Link to={`/product/${item.product.id}`} className="relative w-20 h-24 overflow-hidden flex-shrink-0 bg-cream">
+                      <PublicImage src={cleanSrc(item.product.image)} alt={item.product.name} fit="contain" position="center top" className="absolute inset-0 h-full w-full p-1" />
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link to={`/product/${item.product.id}`} className="font-display text-base text-charcoal hover:text-burgundy transition-colors">
@@ -74,8 +75,8 @@ export default function Cart() {
               <div className="space-y-4">
                 {rentalItems.map(item => (
                   <div key={`${item.product.id}-rental`} className="flex gap-4 p-4 bg-burgundy/[0.02] border border-burgundy/10">
-                    <Link to={`/product/${item.product.id}`} className="w-20 h-24 overflow-hidden flex-shrink-0 bg-cream flex items-center justify-center">
-                      <img src={item.product.image} alt={item.product.name} className="max-h-full max-w-full object-contain" />
+                    <Link to={`/product/${item.product.id}`} className="relative w-20 h-24 overflow-hidden flex-shrink-0 bg-cream">
+                      <PublicImage src={cleanSrc(item.product.image)} alt={item.product.name} fit="contain" position="center top" className="absolute inset-0 h-full w-full p-1" />
                     </Link>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">

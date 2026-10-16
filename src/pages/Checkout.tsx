@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, CreditCard, Banknote, Smartphone, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import PublicImage, { cleanSrc } from '../components/PublicImage';
 
 export default function Checkout() {
   const { cart, cartTotal, placeOrder } = useApp();
@@ -115,7 +116,9 @@ export default function Checkout() {
           <div className="space-y-3 text-sm font-body mb-4">
             {cart.map(item => (
               <div key={`${item.product.id}-${item.mode}`} className="flex items-center gap-3 py-2 border-b border-cream last:border-0">
-                <img src={item.product.image} alt="" className="w-10 h-12 object-contain bg-cream rounded" />
+                <div className="relative w-10 h-12 flex-shrink-0 overflow-hidden bg-cream rounded">
+                  <PublicImage src={cleanSrc(item.product.image)} alt="" fit="contain" className="absolute inset-0 h-full w-full p-0.5" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-charcoal truncate font-body">{item.product.name}</p>
                   <p className="text-[9px] text-charcoal-muted/50 font-body">{item.mode === 'retail' ? 'Buy' : 'Rent'} · Qty: {item.quantity}</p>
